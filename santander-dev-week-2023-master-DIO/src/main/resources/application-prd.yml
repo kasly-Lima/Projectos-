@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    # URL de conexão com o banco de dados PostgreSQL usando variáveis de ambiente
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}
+    # Nome de usuário para autenticação no banco de dados, também usando uma variável de ambiente
+    username: ${PGUSER}
+    # Senha do banco de dados, utilizando uma variável de ambiente para segurança
+    password: ${PGPASSWORD}
+
+  jpa:
+    # Não mantém a sessão aberta após a visualização, evitando problemas de transação
+    open-in-view: false
+    # Configurações do Hibernate para o gerenciamento do esquema do banco de dados
+    hibernate:
+      # A estratégia de validação do esquema do banco de dados
+      ddl-auto: validate # Verifica se o esquema está de acordo com as entidades definidas
