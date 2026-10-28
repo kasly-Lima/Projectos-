@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Ranking{% endblock %}
+{% block content %}
+<h1 class="page-title">Ranking</h1>
+<div class="card">
+  {% for p in players %}
+  {% set i = loop.index %}
+  {% set rr = racas.get(p.raca) %}
+  <div class="rank-row {{ 'p1' if i==1 else ('p2' if i==2 else ('p3' if i==3)) }}">
+    <div class="rank-pos">{% if i==1 %}🥇{% elif i==2 %}🥈{% elif i==3 %}🥉{% else %}{{ i }}{% endif %}</div>
+    <div class="rank-skin" aria-hidden="true">{{ p.skin_icone or (rr[1] if rr else '🧑') }}</div>
+    <div class="grow">
+      <div class="rank-name">{{ p.username }}{% if p.id == session.user_id %}<span class="badge badge-info">Você</span>{% endif %}</div>
+      <div class="muted">{% if rr %}{{ rr[2] }} · {% endif %}{{ p.classe }}</div>
+    </div>
+    <div class="rank-stats">
+      <div class="rank-stat"><b class="cyan">{{ p.nivel }}</b><span>Nível</span></div>
+      <div class="rank-stat"><b>{{ p.missoes }}</b><span>Missões</span></div>
+      <div class="rank-stat"><b class="yellow">{{ p.moedas }}</b><span>Moedas</span></div>
+      <div class="rank-stat"><b class="magenta">{{ p.conquistas }}</b><span>Conquistas</span></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">Ninguém no ranking ainda.</div>
+  {% endfor %}
+</div>
+{% endblock %}

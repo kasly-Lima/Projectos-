@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block title %}Ponto da equipe{% endblock %}
+{% block content %}
+<h1 class="page-title">Registros de ponto</h1>
+<div class="card">
+  <div class="card-title">Batidas recentes — validar</div>
+  {% if registros %}
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Usuário</th><th>Registro</th><th>Data</th><th>Hora</th><th>Status</th><th>Ação</th></tr></thead>
+    <tbody>
+      {% for r in registros %}
+      <tr>
+        <td class="head" style="font-weight:700">{{ r.username }}</td>
+        <td>{{ labels.get(r.tipo, r.tipo) }}</td>
+        <td class="muted">{{ r.data }}</td>
+        <td class="muted">{{ r.timestamp[11:16] }}</td>
+        <td>{% if r.validado %}<span class="badge badge-success">Validado +{{ r.xp_bonus }} XP +{{ r.moedas_bonus }} moedas</span>{% else %}<span class="badge badge-info">Aguardando</span>{% endif %}</td>
+        <td>{% if not r.validado %}
+          <form method="POST" action="{{ url_for('validar_ponto', pid=r.id) }}" class="row" style="gap:6px">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input class="input input-sm" type="number" name="xp_bonus" value="25" min="0" max="100000" aria-label="XP de bônus">
+            <input class="input input-sm" type="number" name="moedas_bonus" value="5" min="0" max="100000" aria-label="Moedas de bônus">
+            <button type="submit" class="btn btn-ok btn-sm">Validar</button>
+          </form>{% else %}<span class="muted">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <div class="empty"><span class="big" aria-hidden="true">⏰</span>Nenhum registro de ponto ainda.</div>
+  {% endif %}
+</div>
+{% endblock %}

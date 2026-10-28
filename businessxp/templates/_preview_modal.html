@@ -1,0 +1,17 @@
+{# Modal de pré-visualização 3D. Exige _three.html carregado antes de preview.js. #}
+<div class="modal" id="model-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">Pré-visualização</div>
+      <button type="button" class="modal-close" id="modal-close" aria-label="Fechar">✕</button>
+    </div>
+    <div class="viewer-stage">
+      <div class="v-loading"><div class="spinner"></div><div class="v-progress">Invocando…</div></div>
+      <div class="v-error" role="alert"></div>
+      <canvas id="modal-canvas" role="img" aria-label="Pré-visualização 3D do personagem"></canvas>
+      <div class="hud"></div>
+    </div>
+    <div class="modal-foot" id="modal-info"></div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/preview.js') }}"></script>

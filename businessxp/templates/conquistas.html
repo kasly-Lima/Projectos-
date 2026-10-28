@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Conquistas{% endblock %}
+{% block content %}
+<h1 class="page-title">Conquistas</h1>
+<div class="ach-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+  {% for a in achs %}
+  <div class="ach {{ 'earned' if a.earned }}">
+    <span class="ach-icon" aria-hidden="true">{{ a.icone }}</span>
+    <div class="grow">
+      <div class="ach-title">{{ a.titulo }}{% if a.earned %} <span class="badge badge-success">Conquistada</span>{% endif %}</div>
+      <div class="ach-desc">{{ a.descricao }}</div>
+      {% if a.earned and a.earned_at %}<div class="ach-date">{{ a.earned_at|localdt('%d/%m/%Y') }}</div>{% endif %}
+    </div>
+    <span aria-hidden="true">{{ '✨' if a.earned else '🔒' }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% block title %}Gestão{% endblock %}
+{% block content %}
+<h1 class="page-title">Painel de gestão</h1>
+
+<div class="grid-2 mb">
+  <div class="card">
+    <div class="card-title">Criar missão</div>
+    <form method="POST" action="{{ url_for('criar_missao') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label class="label" for="m-titulo">Título</label><input class="input" id="m-titulo" type="text" name="titulo" maxlength="120" required></div>
+      <div class="form-group"><label class="label" for="m-user">Guerreiro</label>
+        <select class="input" id="m-user" name="assigned_to" required><option value="">Selecionar…</option>
+          {% for u in usuarios %}<option value="{{ u.id }}">{{ u.username }} (nível {{ u.nivel }})</option>{% endfor %}</select></div>
+      <div class="grid-form">
+        <div class="form-group"><label class="label" for="m-cat">Categoria</label>
+          <select class="input" id="m-cat" name="categoria"><option value="task">Tarefa</option><option value="inventory">Inventário</option><option value="physical">Físico</option><option value="guild">Guilda</option></select></div>
+        <div class="form-group"><label class="label" for="m-prazo">Prazo</label><input class="input" id="m-prazo" type="date" name="deadline"></div>
+        <div class="form-group"><label class="label" for="m-xp">XP</label><input class="input" id="m-xp" type="number" name="xp_reward" value="50" min="0" max="100000"></div>
+        <div class="form-group"><label class="label" for="m-mc">Moedas</label><input class="input" id="m-mc" type="number" name="moedas_reward" value="10" min="0" max="100000"></div>
+      </div>
+      <div class="form-group"><label class="label" for="m-desc">Descrição</label><textarea class="input" id="m-desc" name="descricao" rows="2" maxlength="1000"></textarea></div>
+      <button type="submit" class="btn btn-primary btn-block">Criar missão</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Guerreiros — dar recompensa</div>
+    {% for u in usuarios %}
+    <div class="warrior-row">
+      <div class="grow" style="min-width:130px"><div class="head" style="font-weight:700">{{ u.username }}</div>
+        <div class="muted small">Nível {{ u.nivel }} · {{ u.xp }} XP · {{ u.moedas }} moedas</div></div>
+      <form method="POST" action="{{ url_for('award', uid=u.id) }}" class="row" style="gap:6px">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input class="input input-sm" type="number" name="xp" placeholder="XP" min="0" max="100000" aria-label="XP para {{ u.username }}">
+        <input class="input input-sm" type="number" name="moedas" placeholder="Moedas" min="0" max="100000" aria-label="Moedas para {{ u.username }}">
+        <button type="submit" class="btn btn-ghost btn-sm">Dar</button>
+      </form>
+    </div>
+    {% else %}<div class="empty">Nenhum guerreiro cadastrado.</div>{% endfor %}
+  </div>
+</div>
+
+<div class="card mb">
+  <div class="card-title">Criar exercício — múltipla escolha</div>
+  <form method="POST" action="{{ url_for('criar_challenge') }}" id="formChallenge">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="grid-form">
+      <div class="form-group"><label class="label" for="c-titulo">Título</label><input class="input" id="c-titulo" type="text" name="titulo" maxlength="120" placeholder="Ex.: Conhecimentos de redes" required></div>
+      <div class="form-group"><label class="label" for="c-user">Atribuir ao guerreiro</label>
+        <select class="input" id="c-user" name="assigned_to" required><option value="">Selecionar…</option>
+          {% for u in usuarios %}<option value="{{ u.id }}">{{ u.username }} (nível {{ u.nivel }})</option>{% endfor %}</select></div>
+      <div class="form-group"><label class="label" for="c-cat">Categoria</label>
+        <select class="input" id="c-cat" name="category"><option>Redes</option><option>Active Directory</option><option>Workspace</option><option>Office 365</option><option>Geral</option></select></div>
+      <div class="grid-form" style="gap:0 14px">
+        <div class="form-group"><label class="label" for="c-xp">XP</label><input class="input" id="c-xp" type="number" name="xp_reward" value="100" min="0" max="100000"></div>
+        <div class="form-group"><label class="label" for="c-gold">Moedas</label><input class="input" id="c-gold" type="number" name="gold_reward" value="20" min="0" max="100000"></div>
+      </div>
+    </div>
+    <div class="form-group"><label class="label" for="c-q">Pergunta</label><textarea class="input" id="c-q" name="question" rows="3" maxlength="2000" required></textarea></div>
+    <div class="form-group">
+      <span class="label" id="alts-label">Alternativas — marque a correta no círculo à esquerda</span>
+      <div id="alts" role="radiogroup" aria-labelledby="alts-label"></div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-add-alt">Adicionar alternativa</button>
+        <span class="muted small" id="alt-count"></span>
+      </div>
+      <input type="hidden" name="resposta_correta" id="resp-correta" value="">
+      <div class="small" id="alt-msg" role="alert" style="margin-top:8px;min-height:20px"></div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Criar exercício</button>
+  </form>
+</div>
+
+<div class="card mb">
+  <div class="card-title">Missões para validar <span class="badge badge-info">{{ m_env|length }}</span></div>
+  {% for m in m_env %}
+  <div class="avaliar">
+    <div class="row between wrap top mb" style="margin-bottom:12px">
+      <div><div class="head yellow" style="font-size:18px;font-weight:700">{{ m.titulo }}</div>
+        <div class="muted">Guerreiro: <strong style="color:var(--text)">{{ m.guerreiro }}</strong> · Sugerido: <span class="yellow">+{{ m.xp_reward }} XP · +{{ m.moedas_reward }} moedas</span></div></div>
+      <span class="badge badge-violet">Aguardando validação</span>
+    </div>
+    {% if m.feedback_usuario %}
+    <div class="relato"><b>Relato do guerreiro (etapa 1)</b><em>“{{ m.feedback_usuario }}”</em></div>
+    {% else %}<div class="muted small" style="margin-bottom:12px"><em>O guerreiro não deixou descrição.</em></div>{% endif %}
+    <form method="POST" action="{{ url_for('avaliar_missao', mid=m.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="grid-form">
+        <div class="form-group"><label class="label">XP a conceder</label><input class="input" type="number" name="xp_dado" value="{{ m.xp_reward }}" min="0" max="100000"></div>
+        <div class="form-group"><label class="label">Moedas a conceder</label><input class="input" type="number" name="moedas_dadas" value="{{ m.moedas_reward }}" min="0" max="100000"></div>
+      </div>
+      <div class="form-group"><label class="label">Feedback para o guerreiro</label><input class="input" type="text" name="feedback" maxlength="500" placeholder="Comentário sobre a execução"></div>
+      <div class="row wrap">
+        <button type="submit" name="acao" value="aprovar" class="btn btn-ok grow">Aprovar e encerrar</button>
+        <button type="submit" name="acao" value="rejeitar" class="btn btn-danger grow" data-confirm="Devolver a missão ao guerreiro para correção?">Devolver para correção</button>
+      </div>
+    </form>
+  </div>
+  {% else %}<div class="empty">Nenhuma missão aguardando validação.</div>{% endfor %}
+</div>
+
+{% if m_enc %}
+<div class="card">
+  <div class="card-title">Missões encerradas recentemente</div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Missão</th><th>Guerreiro</th><th>XP</th><th>Moedas</th><th>Feedback</th></tr></thead>
+    <tbody>{% for m in m_enc %}
+      <tr><td class="head">{{ m.titulo }}</td><td>{{ m.guerreiro }}</td><td class="yellow">+{{ m.xp_dado }}</td><td class="yellow">+{{ m.moedas_dadas }}</td><td class="muted">{{ m.feedback_gestor or '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-confirm]');
+  if (b && !confirm(b.dataset.confirm)) e.preventDefault();
+});
+
+/* ── Editor de alternativas ── */
+var LETRAS = ['A', 'B', 'C', 'D', 'E', 'F'], contador = 0;
+var box = document.getElementById('alts'), hidden = document.getElementById('resp-correta'), msg = document.getElementById('alt-msg');
+function linhas() { return box.querySelectorAll('.alt-row'); }
+function atualizar() {
+  linhas().forEach(function (r, i) {
+    r.querySelector('.alt-letra').textContent = LETRAS[i];
+    r.querySelector('.alt-input').placeholder = 'Texto da alternativa ' + LETRAS[i];
+    r.querySelector('.alt-radio').setAttribute('aria-label', 'Marcar ' + LETRAS[i] + ' como correta');
+  });
+  var n = linhas().length;
+  document.getElementById('alt-count').textContent = n + ' alternativas (de 2 a 6)';
+  document.getElementById('btn-add-alt').disabled = n >= 6;
+}
+function marcar(idx) {
+  hidden.value = idx; msg.textContent = '';
+  linhas().forEach(function (r) {
+    var on = r.dataset.idx === String(idx);
+    r.classList.toggle('certa', on); r.querySelector('.alt-radio').setAttribute('aria-checked', String(on));
+  });
+}
+function addAlt() {
+  if (linhas().length >= 6) return;
+  var idx = contador++;
+  var row = document.createElement('div'); row.className = 'alt-row'; row.dataset.idx = idx;
+  var rad = document.createElement('button'); rad.type = 'button'; rad.className = 'alt-radio'; rad.setAttribute('role', 'radio'); rad.setAttribute('aria-checked', 'false');
+  rad.appendChild(document.createElement('i')); rad.addEventListener('click', function () { marcar(idx); });
+  var let_ = document.createElement('span'); let_.className = 'alt-letra';
+  var inp = document.createElement('input'); inp.type = 'text'; inp.className = 'alt-input'; inp.name = 'alternativa_' + idx; inp.required = true; inp.maxLength = 300;
+  var rem = document.createElement('button'); rem.type = 'button'; rem.className = 'alt-remove'; rem.textContent = '✕'; rem.setAttribute('aria-label', 'Remover alternativa');
+  rem.addEventListener('click', function () {
+    if (linhas().length <= 2) { msg.textContent = 'Mantenha ao menos 2 alternativas.'; return; }
+    if (hidden.value === String(idx)) hidden.value = '';
+    row.remove(); atualizar();
+  });
+  row.appendChild(rad); row.appendChild(let_); row.appendChild(inp); row.appendChild(rem);
+  box.appendChild(row); atualizar();
+}
+document.getElementById('btn-add-alt').addEventListener('click', addAlt);
+document.getElementById('formChallenge').addEventListener('submit', function (e) {
+  if (hidden.value === '') { e.preventDefault(); msg.textContent = 'Marque qual alternativa é a correta.'; msg.className = 'small red'; }
+});
+addAlt(); addAlt();
+</script>
+{% endblock %}

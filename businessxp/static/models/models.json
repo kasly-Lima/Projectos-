@@ -1,0 +1,8 @@
+{
+  "_ajuda": "Metadados opcionais. A chave é o nome do arquivo. Campos: name, icone, descricao, raridade (comum|raro|epico|lendario), preco (só loja), rotacao_y (graus, gira o modelo para ele olhar de frente). Depois de editar, reinicie o app ou use Admin > Sincronizar modelos.",
+
+  "robo.glb":      { "name": "Autômato",       "icone": "🤖", "descricao": "Engrenagens, vapor e um olho vermelho.", "raridade": "comum", "rotacao_y": 90 },
+  "samurai.glb":   { "name": "Samurai Sombrio", "icone": "⚔️", "descricao": "Armadura negra com faixa carmesim.",    "raridade": "comum" },
+  "morto_vivo.glb":{ "name": "Morto-vivo",      "icone": "💀", "descricao": "Olhos verdes que não piscam.",          "raridade": "raro",  "preco": 600 },
+  "pixel_3393.glb":{ "name": "Golem de Ferrugem","icone": "🦾", "descricao": "Aço velho, olhos laranja em brasa.",   "raridade": "epico", "preco": 900 }
+}

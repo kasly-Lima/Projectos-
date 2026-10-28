@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Notificações{% endblock %}
+{% block content %}
+<h1 class="page-title">Notificações</h1>
+<div class="card" style="max-width:760px">
+  <div class="row between wrap mb">
+    <div class="muted">As mais recentes aparecem primeiro.</div>
+    <button type="button" id="btn-lidas" class="btn btn-ghost btn-sm">Marcar todas como lidas</button>
+  </div>
+  {% if notificacoes %}
+    {% for n in notificacoes %}
+    <div class="notif {{ 'nova' if not n.lida }}">
+      <span class="notif-icon" aria-hidden="true">{{ n.icone or '🔔' }}</span>
+      <div class="grow">
+        <div class="notif-title">{{ n.titulo }}{% if not n.lida %} <span class="badge badge-info notif-new">Nova</span>{% endif %}</div>
+        <div class="muted">{{ n.mensagem }}</div>
+        <div class="notif-time">{{ n.created_at|localdt }}</div>
+      </div>
+      {% if n.link and n.link.startswith('/') %}<a href="{{ n.link }}" class="btn btn-ghost btn-sm">Abrir</a>{% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty"><span class="big" aria-hidden="true">🔔</span>Nenhuma notificação por aqui.</div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('btn-lidas').addEventListener('click', async function () {
+  try { await BXP.api('/api/notifications/mark_read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); } catch (e) { return; }
+  document.querySelectorAll('.notif.nova').forEach(function (e) { e.classList.remove('nova'); });
+  document.querySelectorAll('.notif-new').forEach(function (e) { e.remove(); });
+  var b = document.getElementById('notif-badge'); if (b) b.style.display = 'none';
+});
+</script>
+{% endblock %}

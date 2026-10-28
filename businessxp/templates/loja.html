@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Loja{% endblock %}
+{% block content %}
+<div class="loja-top">
+  <h1 class="page-title" style="margin:0;flex:1">Loja de personagens</h1>
+  <div class="moedas-badge"><span aria-hidden="true">🪙</span><span class="moedas-num">{{ moedas }}</span><span class="muted tiny">moedas</span></div>
+</div>
+<p class="page-sub" style="margin-top:8px">Veja cada personagem em 3D antes de comprar. Os que você compra ficam no inventário do perfil.</p>
+
+<div class="shop-grid">
+{% for item in itens %}
+{% set owned = item.id in owned_ids %}
+<article class="shop-card {{ 'owned' if owned }}">
+  <span class="shop-icon" aria-hidden="true">{{ item.icone }}</span>
+  <span class="badge badge-{{ item.raridade }}">{{ item.raridade }}</span>
+  <h2 class="shop-name">{{ item.name }}</h2>
+  <p class="shop-desc">{{ item.descricao }}</p>
+  <div class="shop-price">🪙 {{ item.preco }}</div>
+  <div class="shop-actions">
+    <button type="button" class="btn btn-ghost btn-sm" data-preview="{{ item.caminho }}" data-title="{{ item.name }}" data-rot="{{ item.rotacao_y }}">Ver em 3D</button>
+    {% if owned %}
+      <span class="badge badge-success">No inventário</span>
+    {% elif moedas >= item.preco %}
+      <form method="POST" action="{{ url_for('comprar', model_id=item.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-sm btn-block">Comprar</button>
+      </form>
+    {% else %}
+      <span class="muted tiny">Faltam {{ item.preco - moedas }} moedas</span>
+    {% endif %}
+  </div>
+  <div class="rbar {{ item.raridade }}"></div>
+</article>
+{% else %}
+<div class="empty" style="grid-column:1/-1"><span class="big" aria-hidden="true">🛒</span>A loja está vazia.
+  {% if session.role == 'admin' %}Coloque arquivos .glb em <code>static/models/loja</code> e use Admin → Sincronizar modelos.{% else %}Volte em breve.{% endif %}</div>
+{% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+{% include '_three.html' %}
+{% include '_preview_modal.html' %}
+{% endblock %}
