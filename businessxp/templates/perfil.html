@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block title %}Perfil{% endblock %}
+{% block content %}
+{% set cat_icons = {'task':'📜','inventory':'🧪','physical':'💪','guild':'🛡️'} %}
+<h1 class="page-title">Perfil</h1>
+<div class="layout">
+
+  <div>
+    <div class="card viewer-wrap" style="padding:0">
+      <div class="viewer-stage">
+        <div class="v-loading"><div class="spinner"></div><div class="v-progress">Invocando…</div></div>
+        <div class="v-error" role="alert"></div>
+        <canvas id="viewerCanvas" role="img" aria-label="Visualizador 3D do personagem equipado"></canvas>
+        <div class="hud"></div>
+      </div>
+      <div class="viewer-bar">
+        <button type="button" class="vbtn active" data-rot="1" onclick="setAR(true,this)">Girar</button>
+        <button type="button" class="vbtn" data-rot="1" onclick="setAR(false,this)">Parar</button>
+        <button type="button" class="vbtn" id="btn-wire" aria-pressed="false" onclick="toggleWire(this)">Wire</button>
+        <button type="button" class="vbtn" onclick="if(v)v.resetCamera()">Reset</button>
+      </div>
+      <div class="viewer-info">
+        <div class="viewer-name">{{ u.username }}</div>
+        <div class="viewer-sub">
+          {% set rr = racas.get(u.raca) %}{% if rr %}{{ rr[1] }} {{ rr[2] }} · {% endif %}{{ u.classe }} · Nível {{ u.nivel }}
+        </div>
+        <div class="tiny muted" id="model-name" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val">{{ u.nivel }}</div><div class="stat-lbl">Nível</div></div>
+        <div class="stat-box"><div class="stat-val coin">{{ u.moedas }}</div><div class="stat-lbl">Moedas</div></div>
+        <div class="stat-box"><div class="stat-val">{{ earned_achs }}/{{ total_achs }}</div><div class="stat-lbl">Conquistas</div></div>
+      </div>
+      <div class="xp-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{{ needed_xp }}" aria-valuenow="{{ u.xp }}" aria-label="Experiência"><div class="xp-fill" style="width:{{ xp_pct }}%"></div></div>
+      <div class="xp-labels"><span>{{ u.xp }} XP</span><span>{{ needed_xp }} XP para o nível {{ u.nivel + 1 }}</span></div>
+    </div>
+
+    <div class="card mt">
+      <div class="card-title">Guardião do tempo</div>
+      <div class="ponto-counter" id="ponto-counter" aria-live="polite">Carregando…</div>
+      <div id="ponto-slots-container"></div>
+      <button type="button" id="btn-ponto" class="btn btn-ghost" onclick="baterPonto()" disabled>Carregando…</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="tabs" role="tablist" aria-label="Seções do perfil">
+      <button type="button" class="tab-btn active" role="tab" id="tabbtn-inv" aria-selected="true" aria-controls="tab-inv" onclick="tab('inv',this)">Inventário</button>
+      <button type="button" class="tab-btn" role="tab" id="tabbtn-miss" aria-selected="false" aria-controls="tab-miss" onclick="tab('miss',this)">Missões{% if m_pend|length %}<span class="tab-badge">{{ m_pend|length }}</span>{% endif %}</button>
+      <button type="button" class="tab-btn" role="tab" id="tabbtn-hist" aria-selected="false" aria-controls="tab-hist" onclick="tab('hist',this)">Histórico</button>
+      <button type="button" class="tab-btn" role="tab" id="tabbtn-achs" aria-selected="false" aria-controls="tab-achs" onclick="tab('achs',this)">Conquistas</button>
+    </div>
+
+    <div class="tab-panel active" id="tab-inv" role="tabpanel" aria-labelledby="tabbtn-inv">
+      <div class="card">
+        <div class="card-title">Meus personagens</div>
+        {% if inv %}
+        <div class="inv-grid">
+          {% for item in inv %}
+          <form method="POST" action="{{ url_for('equipar', model_id=item.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="inv-card {{ 'equipado' if item.equipado }}" {% if item.equipado %}aria-pressed="true"{% endif %}>
+              {% if item.equipado %}<span class="eq-badge">Em uso</span>{% endif %}
+              <span class="inv-icon" aria-hidden="true">{{ item.icone }}</span>
+              <div class="inv-name">{{ item.name }}</div>
+              {% if not item.equipado %}<div class="inv-action">Equipar</div>{% endif %}
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+        <div class="center mt"><a href="{{ url_for('loja') }}" class="btn btn-ghost btn-sm">Ver loja</a></div>
+        {% else %}
+        <div class="empty">Você ainda não tem personagens. <a href="{{ url_for('loja') }}">Visite a loja</a>.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-miss" role="tabpanel" aria-labelledby="tabbtn-miss">
+      <div class="card">
+        <div class="card-title">Missões ativas</div>
+        {% if m_pend %}
+          {% for m in m_pend %}
+          {% set devolvida = m.feedback_gestor and '[REJEITADA]' in m.feedback_gestor %}
+          {% if devolvida %}{% set estado = 'devolvida' %}{% elif loop.first %}{% set estado = 'urg' %}{% else %}{% set estado = '' %}{% endif %}
+          <div class="miss-item {{ estado }}">
+            <span class="miss-icon" aria-hidden="true">{{ cat_icons.get(m.categoria, '📜') }}</span>
+            <div class="grow">
+              <div class="miss-title">{{ m.titulo }}</div>
+              {% if m.descricao %}<div class="miss-meta">{{ m.descricao }}</div>{% endif %}
+              <div class="miss-reward">+{{ m.xp_reward }} XP · +{{ m.moedas_reward }} moedas</div>
+              {% if m.deadline %}<div class="miss-meta deadline">Prazo: {{ m.deadline }}</div>{% endif %}
+              {% if devolvida %}<div class="miss-returned">Devolvida pelo gestor: {{ m.feedback_gestor.replace('[REJEITADA] ','') }}</div>{% endif %}
+            </div>
+            <button type="button" onclick="toggleConfirm({{ m.id }})" class="btn btn-primary btn-sm" aria-controls="confirm-{{ m.id }}">Concluir</button>
+          </div>
+          <div class="confirm-panel" id="confirm-{{ m.id }}">
+            <div class="confirm-title">Etapa 1 de 2 — confirmar conclusão</div>
+            <div class="confirm-desc">Depois de confirmar, o gestor valida se a missão foi executada como pedido.</div>
+            <form method="POST" action="{{ url_for('confirmar_missao', mid=m.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <textarea name="feedback_usuario" rows="2" maxlength="1000" class="input" aria-label="Descreva o que foi feito" placeholder="Descreva o que foi feito…"></textarea>
+              <div class="row mt">
+                <button type="submit" class="btn btn-ok btn-sm grow">Confirmar como concluída</button>
+                <button type="button" onclick="toggleConfirm({{ m.id }})" class="btn btn-ghost btn-sm">Cancelar</button>
+              </div>
+            </form>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty">Nenhuma missão pendente. Aproveite o respiro.</div>
+        {% endif %}
+
+        {% if m_env %}
+        <div class="miss-section-title">Aguardando validação do gestor — etapa 2 de 2</div>
+        {% for m in m_env %}
+        <div class="miss-item aguardando">
+          <span class="miss-icon" aria-hidden="true">🕐</span>
+          <div class="grow">
+            <div class="miss-title">{{ m.titulo }}</div>
+            <div class="miss-meta">Você concluiu. O gestor vai validar.</div>
+            {% if m.feedback_usuario %}<div class="miss-meta quote">“{{ m.feedback_usuario }}”</div>{% endif %}
+          </div>
+          <span class="badge badge-violet">Em validação</span>
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-hist" role="tabpanel" aria-labelledby="tabbtn-hist">
+      <div class="card">
+        <div class="card-title">Missões encerradas</div>
+        {% if m_enc %}
+        <div class="table-wrap"><table class="table">
+          <thead><tr><th>Missão</th><th>XP</th><th>Moedas</th><th>Feedback</th></tr></thead>
+          <tbody>
+            {% for m in m_enc %}
+            <tr><td class="head">{{ m.titulo }}</td><td class="yellow">+{{ m.xp_dado }}</td><td class="yellow">+{{ m.moedas_dadas }}</td>
+              <td class="muted">{{ m.feedback_gestor or '—' }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table></div>
+        {% else %}
+        <div class="empty">Nenhuma missão encerrada ainda.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="tab-panel" id="tab-achs" role="tabpanel" aria-labelledby="tabbtn-achs">
+      <div class="card">
+        <div class="card-title">Conquistas</div>
+        <div class="ach-grid">
+          {% for a in achs %}
+          <div class="ach {{ 'earned' if a.earned }}">
+            <span class="ach-icon" aria-hidden="true">{{ a.icone }}</span>
+            <div><div class="ach-title">{{ a.titulo }}</div><div class="ach-desc">{{ a.descricao }}</div></div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% include '_three.html' %}
+<script>
+function tab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active'); btn.setAttribute('aria-selected', 'true');
+}
+function toggleConfirm(mid) {
+  var el = document.getElementById('confirm-' + mid); if (!el) return;
+  var vis = el.style.display === 'block';
+  document.querySelectorAll('.confirm-panel').forEach(function (p) { p.style.display = 'none'; });
+  if (!vis) { el.style.display = 'block'; var t = el.querySelector('textarea'); if (t) t.focus(); }
+}
+
+/* ── Viewer 3D ── */
+var v = null, wireOn = false;
+try { v = new BusinessXpViewer('viewerCanvas', { autoRotate: true }); } catch (e) { console.error(e); }
+function setAR(on, btn) {
+  if (!v) return; v.setAutoRotate(on);
+  document.querySelectorAll('.vbtn[data-rot]').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+function toggleWire(btn) {
+  if (!v) return; wireOn = !wireOn; v.setWireframe(wireOn);
+  btn.classList.toggle('active', wireOn); btn.setAttribute('aria-pressed', String(wireOn));
+}
+if (v) {
+  BXP.api('/api/perfil').then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (d) {
+      if (d.equipado) {
+        document.getElementById('model-name').textContent = d.equipado.icone + ' ' + d.equipado.nome;
+        v.loadModel(d.equipado.caminho, { rotacaoY: d.equipado.rotacao_y });
+      } else v._showError(['Nenhum personagem equipado', 'Equipe um no inventário ou compre na loja.']);
+    }).catch(function () { v._showError(['Erro ao carregar o personagem', 'Recarregue a página.']); });
+}
+
+/* ── Guardião do tempo ── */
+var SICONS = { entrada: '🌅', saida_almoco: '🍽️', retorno: '↩️', saida: '🌙' };
+var SBTNS = { entrada: 'Registrar entrada', saida_almoco: 'Registrar saída para o almoço', retorno: 'Registrar retorno do almoço', saida: 'Registrar saída' };
+function criarSlot(s) {
+  var d = document.createElement('div'); d.className = 'ponto-slot ' + (s.feito ? 'feito' : 'pendente');
+  var i = document.createElement('span'); i.className = 'ponto-slot-icon'; i.textContent = SICONS[s.periodo] || '⏰';
+  var l = document.createElement('span'); l.className = 'ponto-slot-label'; l.textContent = s.label;
+  var h = document.createElement('span'); h.className = 'ponto-slot-hora'; h.textContent = s.feito ? '✔ ' + s.hora : '--:--';
+  d.appendChild(i); d.appendChild(l); d.appendChild(h); return d;
+}
+async function carregarPonto() {
+  var counter = document.getElementById('ponto-counter');
+  try {
+    var r = await BXP.api('/api/ponto/status'); if (!r.ok) throw new Error(r.status);
+    var d = await r.json();
+    counter.textContent = d.total + ' de 4 registros hoje';
+    var box = document.getElementById('ponto-slots-container');
+    box.replaceChildren.apply(box, d.slots.map(criarSlot));
+    var btn = document.getElementById('btn-ponto');
+    btn.className = 'btn ' + (d.completo ? 'btn-ok' : 'btn-primary');
+    if (d.completo) { btn.disabled = true; btn.textContent = '✅ Jornada concluída'; btn.dataset.periodo = ''; }
+    else { btn.disabled = false; btn.textContent = SBTNS[d.proximo] || 'Registrar ponto'; btn.dataset.periodo = d.proximo; }
+  } catch (e) { counter.textContent = 'Não foi possível carregar os registros de ponto.'; }
+}
+var pontoEnviando = false;
+async function baterPonto() {
+  var btn = document.getElementById('btn-ponto'), periodo = btn.dataset.periodo;
+  if (!periodo || btn.disabled || pontoEnviando) return;
+  pontoEnviando = true; btn.disabled = true; btn.textContent = 'Registrando…';
+  try {
+    var fd = new FormData(); fd.append('periodo', periodo);
+    var r = await BXP.api('/ponto/bater', { method: 'POST', body: fd });
+    var d = null; try { d = await r.json(); } catch (_) {}
+    showToast({ icone: r.ok && d && d.status === 'ok' ? '✅' : '⚠️', titulo: (d && d.mensagem) || 'Erro ao registrar ponto (' + r.status + ')', mensagem: '' });
+  } catch (e) { showToast({ icone: '⚠️', titulo: 'Sem conexão ao registrar o ponto', mensagem: '' }); }
+  finally { pontoEnviando = false; await carregarPonto(); }
+}
+carregarPonto();
+setInterval(function () { if (!document.hidden) carregarPonto(); }, 30000);
+</script>
+{% endblock %}

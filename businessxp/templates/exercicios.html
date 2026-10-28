@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Exercícios{% endblock %}
+{% block content %}
+{% set letras = ['A','B','C','D','E','F'] %}
+<div class="gf-page">
+  <div class="gf-header">
+    <h1 class="gf-header-title">Avaliação de conhecimentos</h1>
+    <p class="muted">Escolha a alternativa correta em cada questão. Acertos rendem XP e moedas.</p>
+    {% if challenges %}
+    {% set total = challenges|length %}{% set feitos = respondidos|length %}
+    <div class="row between small mt"><span>Progresso</span><span>{{ feitos }} de {{ total }} respondidas</span></div>
+    <div class="gf-progress"><i style="width:{{ (feitos / total * 100)|int }}%"></i></div>
+    {% endif %}
+  </div>
+
+  {% for ch in challenges %}
+  {% set alts = ch.alternativas|from_json %}
+  {% set ja_resp = ch.id in respondidos %}
+  {% set resp = respostas.get(ch.id) %}
+  {% set acertou = resp and resp.score == 10 %}
+  <section class="gf-card {{ ('acertou' if acertou else 'errou') if ja_resp }}">
+    <div class="gf-num">
+      <span>{{ loop.index }}. {{ ch.category }}</span>
+      {% if ja_resp %}<span class="badge {{ 'badge-success' if acertou else 'badge-danger' }}">{{ 'Correta' if acertou else 'Incorreta' }}</span>{% endif %}
+    </div>
+    <h2 class="gf-pergunta" style="font-weight:500">{{ ch.question }}</h2>
+
+    {% if not alts %}
+      <div class="empty">Este exercício não tem alternativas configuradas.</div>
+    {% elif ja_resp %}
+      <div class="gf-opcoes">
+        {% for alt in alts %}
+        {% set sel = resp and resp.answer == loop.index0|string %}
+        {% set certa = ch.resposta_correta == loop.index0|string %}
+        <div class="gf-opcao neutra {{ 'correta' if certa else ('errada' if sel) }}">
+          <span class="gf-radio"><i></i></span><span class="gf-letra">{{ letras[loop.index0] }}</span>
+          <span class="gf-opcao-txt">{{ alt }}</span>
+          {% if certa %}<span aria-label="Alternativa correta">✅</span>{% elif sel %}<span aria-label="Sua resposta">❌</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="gf-result {{ 'acerto' if acertou else 'erro' }}">
+        <span style="font-size:26px" aria-hidden="true">{{ '🎉' if acertou else '📚' }}</span>
+        <div><b>{{ 'Resposta correta' if acertou else 'Resposta incorreta' }}</b>
+          <div class="muted">{% if acertou %}Você ganhou +{{ ch.xp_reward }} XP e +{{ ch.gold_reward }} moedas.{% else %}A correta era a alternativa {{ letras[ch.resposta_correta|int] }}.{% endif %}</div></div>
+      </div>
+    {% else %}
+      <form method="POST" action="{{ url_for('responder_challenge', cid=ch.id) }}" class="gf-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <fieldset style="border:0">
+          <legend class="skip" style="position:static;display:none">Alternativas</legend>
+          <div class="gf-opcoes">
+            {% for alt in alts %}
+            <label class="gf-opcao">
+              <input type="radio" name="resposta" value="{{ loop.index0 }}" required>
+              <span class="gf-radio"><i></i></span><span class="gf-letra">{{ letras[loop.index0] }}</span>
+              <span class="gf-opcao-txt">{{ alt }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div class="gf-reward"><span>Recompensa se acertar:</span><b class="yellow">+{{ ch.xp_reward }} XP</b><b class="yellow">+{{ ch.gold_reward }} moedas</b></div>
+        <button type="submit" class="btn btn-primary gf-send" disabled>Escolha uma alternativa</button>
+      </form>
+    {% endif %}
+  </section>
+  {% else %}
+  <div class="empty"><span class="big" aria-hidden="true">📋</span>Nenhum exercício para você agora.<br>Quando o gestor criar um, ele aparece aqui.</div>
+  {% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.gf-form').forEach(function (form) {
+  var btn = form.querySelector('.gf-send');
+  form.addEventListener('change', function (e) {
+    if (e.target.name !== 'resposta') return;
+    form.querySelectorAll('.gf-opcao').forEach(function (o) { o.classList.toggle('selected', o.contains(e.target) && e.target.checked); });
+    btn.disabled = false; btn.textContent = 'Enviar alternativa ' + e.target.closest('.gf-opcao').querySelector('.gf-letra').textContent;
+  });
+  form.addEventListener('submit', function () { btn.disabled = true; btn.textContent = 'Enviando…'; });
+});
+</script>
+{% endblock %}

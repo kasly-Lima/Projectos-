@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h1 class="page-title">Painel admin</h1>
+<div class="grid-2 mb">
+  <div class="card">
+    <div class="card-title">Criar convite</div>
+    <form method="POST" action="{{ url_for('criar_invite') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label class="label" for="i-email">E-mail</label><input class="input" id="i-email" type="email" name="email" placeholder="guerreiro@empresa.com" required></div>
+      <div class="form-group"><label class="label" for="i-role">Cargo</label>
+        <select class="input" id="i-role" name="role"><option value="user">Guerreiro</option><option value="gestor">Gestor</option></select></div>
+      <button type="submit" class="btn btn-primary btn-block">Gerar convite</button>
+    </form>
+    {% if invites %}
+    <div class="mt">
+      {% for inv in invites %}
+      <div class="invite {{ 'usado' if inv.used }}">
+        <div class="row between wrap">
+          <span>{{ inv.email }} <span class="badge badge-comum">{{ inv.role }}</span></span>
+          <span class="badge {{ 'badge-comum' if inv.used else 'badge-success' }}">{{ 'Usado' if inv.used else 'Disponível' }}</span>
+        </div>
+        {% if not inv.used %}
+        <code>{{ inv.link }}</code>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" data-copy="{{ inv.link }}">Copiar link</button>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-title">Estatísticas</div>
+      <div class="mini-stats">
+        <div class="stat-box"><div class="stat-val">{{ usuarios|length }}</div><div class="stat-lbl">Usuários</div></div>
+        <div class="stat-box"><div class="stat-val">{{ invites|length }}</div><div class="stat-lbl">Convites recentes</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Personagens 3D</div>
+      <p class="muted" style="margin-bottom:12px">Arquivos .glb em <code>static/models/iniciais</code> e <code>static/models/loja</code> entram sozinhos. Depois de adicionar ou trocar arquivos, sincronize.</p>
+      <form method="POST" action="{{ url_for('sincronizar_modelos') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-hot btn-block">Sincronizar modelos</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Gerenciar usuários</div>
+  <div class="table-wrap"><table class="table">
+    <thead><tr><th>Usuário</th><th>Cargo</th><th>Nível</th><th>XP</th><th>Moedas</th><th>Skins</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td><div class="head" style="font-weight:700">{{ u.username }}</div><div class="muted small">{{ u.email }}</div></td>
+        <td><span class="badge {{ 'badge-violet' if u.role=='gestor' else 'badge-comum' }}">{{ u.role }}</span></td>
+        <td class="head cyan">{{ u.nivel }}</td><td class="muted">{{ u.xp }}</td><td class="yellow">{{ u.moedas }}</td><td class="muted">{{ u.skins }}</td>
+        <td>
+          <div class="row wrap" style="gap:8px">
+            <form method="POST" action="{{ url_for('mudar_role', uid=u.id) }}" class="row" style="gap:6px">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select class="input input-sm" name="role" style="width:auto" aria-label="Cargo de {{ u.username }}">
+                <option value="user" {{ 'selected' if u.role=='user' }}>user</option><option value="gestor" {{ 'selected' if u.role=='gestor' }}>gestor</option></select>
+              <button type="submit" class="btn btn-ghost btn-sm">Alterar</button>
+            </form>
+            <form method="POST" action="{{ url_for('deletar', uid=u.id) }}" data-confirm="Remover {{ u.username }} e todos os dados dele?">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-danger btn-sm" aria-label="Remover {{ u.username }}">Remover</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7"><div class="empty">Nenhum usuário cadastrado.</div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('submit', function (e) {
+  var m = e.target.dataset && e.target.dataset.confirm;
+  if (m && !confirm(m)) e.preventDefault();
+});
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-copy]'); if (!b) return;
+  var done = function () { var t = b.textContent; b.textContent = 'Copiado!'; setTimeout(function () { b.textContent = t; }, 1500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(b.dataset.copy).then(done, function () {});
+});
+</script>
+{% endblock %}

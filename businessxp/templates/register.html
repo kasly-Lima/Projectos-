@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BusinessXP — Criar conta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cyber.css') }}">
+</head>
+<body>
+<main class="reg-wrap">
+  <h1 class="reg-title">CRIAR CONTA</h1>
+  <p class="reg-sub">Convite para <strong class="cyan">{{ invite.email }}</strong></p>
+
+  {% if error %}<div class="flash error" role="alert">{{ error }}</div>{% endif %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}<div class="flash {{ cat }}" role="alert">{{ msg }}</div>{% endfor %}
+  {% endwith %}
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="card mb">
+      <div class="card-title">Dados da conta</div>
+      <div class="grid-form">
+        <div class="form-group"><label class="label" for="username">Nome de usuário</label>
+          <input class="input" id="username" type="text" name="username" minlength="3" maxlength="30" autocomplete="username" required></div>
+        <div class="form-group"><label class="label" for="password">Senha (mín. 8 caracteres)</label>
+          <input class="input" id="password" type="password" name="password" minlength="8" autocomplete="new-password" required></div>
+      </div>
+      <div class="form-group" style="max-width:320px;margin-bottom:0"><label class="label" for="classe">Classe profissional</label>
+        <select class="input" id="classe" name="classe">{% for nome, icone in classes %}<option value="{{ nome }}">{{ icone }} {{ nome }}</option>{% endfor %}</select></div>
+    </div>
+
+    <div class="card mb">
+      <div class="card-title">Escolha sua raça</div>
+      <div class="pick-grid">
+        {% for val, icone, nome, desc in racas %}
+        <label class="pick {{ 'sel' if loop.first }}">
+          <input type="radio" name="raca" value="{{ val }}" {{ 'checked' if loop.first }}>
+          <span class="pick-icon" aria-hidden="true">{{ icone }}</span>
+          <div class="pick-name">{{ nome }}</div><div class="pick-desc">{{ desc }}</div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card mb">
+      <div class="card-title">Escolha seu primeiro personagem</div>
+      {% if modelos %}
+      <p class="muted" style="margin-bottom:14px">Ele já entra equipado no seu inventário. Outros personagens ficam na loja.</p>
+      <div class="pick-grid two">
+        {% for model in modelos %}
+        <label class="pick {{ 'sel' if loop.first }}">
+          <input type="radio" name="model_id" value="{{ model.id }}" {{ 'checked' if loop.first }}>
+          <span class="free-badge">Grátis</span>
+          <span class="pick-icon" aria-hidden="true">{{ model.icone }}</span>
+          <div class="pick-name">{{ model.name }}</div>
+          <div class="pick-desc">{{ model.descricao }}</div>
+          <button type="button" class="btn btn-ghost btn-sm" data-preview="{{ model.caminho }}" data-title="{{ model.name }}" data-rot="{{ model.rotacao_y }}">Ver em 3D</button>
+        </label>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">Nenhum personagem inicial disponível. Peça ao admin para colocar arquivos .glb em static/models/iniciais.</div>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Entrar no reino</button>
+  </form>
+</main>
+{% if modelos %}
+{% include '_preview_modal.html' %}
+{% include '_three.html' %}
+{# o modal precisa do viewer: preview.js é incluído em _preview_modal.html e só usa BusinessXpViewer ao abrir #}
+{% endif %}
+<script>
+document.querySelectorAll('.pick input[type=radio]').forEach(function (r) {
+  r.addEventListener('change', function () {
+    document.querySelectorAll('input[name="' + r.name + '"]').forEach(function (o) { o.closest('.pick').classList.toggle('sel', o.checked); });
+  });
+});
+</script>
+</body>
+</html>

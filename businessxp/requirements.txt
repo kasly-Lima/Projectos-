@@ -1,0 +1,4 @@
+Flask>=3.0
+Pillow>=10.0          # só para otimizar_modelos.py
+python-dotenv>=1.0    # opcional: lê o arquivo .env
+google-generativeai   # opcional: ativa o Oráculo (precisa de GEMINI_API_KEY)
